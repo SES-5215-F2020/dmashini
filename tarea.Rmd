@@ -1,0 +1,91 @@
+---
+title: "Week 1: Assignment 1"
+author: "Dominique Mashini"
+date: "07-09-2020"
+output: html_document
+---
+
+# Creating a database based on census data (Chile)
+
+## Introduction: survey and sample
+
+I decided to work with the Chilean survey National Study of Public Opinion N°84 (December, 2019), which includes data related to life satisfaction. 
+
+The unit of analysis is at the person-level, and the sample includes 1,496 people surveyed at home in 117 counties across the country. The study includes a population aged over 18 years (urban and rural) residing throughout the country. The instrument was in person (face-to-face) and the interviews were based on a structured questionnaire. 
+
+
+## Reading packages
+In order to read the data I added the tidyverse and haven libraries.
+
+```{r}
+library(tidyverse)
+library(haven)
+```
+
+## Unziping and reading data in SPSS format
+
+I downloaded the data from CEP Chile (2019): https://www.cepchile.cl/cep/encuestas-cep/encuestas-2009-2018/estudio-nacional-de-opinion-publica-n-84-diciembre-2019 
+
+```{r}
+
+unzip("encuesta_cep84_dic2019.zip")
+
+```
+
+I named the full downloaded dataset data_cep.
+
+```{r}
+
+data_cep <- read_sav("Encuesta CEP 84 Dic 2019 v1.sav")
+
+```
+
+# Variables of the dataset
+
+## Identification of variables
+
+To identify the variables of interest, I reviewed the survey report and the survey research manual in the following link: https://www.cepchile.cl/cep/site/docs/20200116/20200116081636/encuestacep_diciembre2019.pdf .
+
+The data contains 1496 observations of 258 variables.
+
+## Exploring variables
+
+After a general overview of the survey results, I found interesting to explore the outcome of car ownership based on certain variables collected by the survey. The variables describe 2 categorical variables (sex and car ownership) and 3 continuous variables (age, average weekly working hours, and years of formal education).
+
+## Filtering dataset with only variables of interest
+
+I filtered my dataset into 5 variables with 1496 observations defined in a dataset named data_cep_2.
+In this process, I selected the following variables of interest:
+
+1) DS_P2_EXACTA = AGE (continuous)
+2) DS_P1 = SEX (categorical)
+3) DS_P37_1 = CAR OWNERSHIP (categorical)
+4) DS_P6_OTRO = AVERAGE WEEKLY WORKING HOURS (continuous)
+5) DS_P3 = YEARS OF FORMAL EDUCATION (continuous)
+
+```{r}
+data_cep_2 <- select(data_cep, DS_P2_EXACTA, DS_P1, DS_P37_1, DS_P6_OTRO, DS_P3)
+```
+ 
+## Reviewing value labels of each variable.
+
+For a better understanding of the dataset and the variables, I browsed through the results of the 1,496 observations and identified the labels related to the dataframe in each categorical variable using the function "data_cep_2$VARIABLEID". 
+
+I found the following labels:
+SEX (1= MALE, 2= FEMALE)
+CAR OWNERSHIP (1=YES, 2=NO, 8=DOES NOT KNOW, 9=DOES NOT ANSWER)
+
+
+Finally, I will save both datasets as CSV files, so I can use them later.
+The first dataset corresponds to the full survey with the 258 variables.
+
+```{r}
+write_csv(data_cep, "data_cep.csv")
+```
+
+The second dataset corresponds to the filtered survey with my 5 variables of interest.
+```{r}
+write.csv(data_cep_2, "data_cep_2.csv")
+```
+
+
