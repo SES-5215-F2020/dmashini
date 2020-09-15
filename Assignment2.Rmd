@@ -37,7 +37,7 @@ person_variables_2018 <-
 
 After browsing through the database person_variables_2018, I defined and renamed my 5 variables of interest:
 
-	
+	.
 1. Travel time to work (var code: JWMNP) = Traveltime (continuous)
 2. Age (var code: AGEP) = Age (continuous)
 3. Educational attainment (var code: SCHL) = Edattain (categorical)
