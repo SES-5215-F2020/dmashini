@@ -1,0 +1,337 @@
+---
+title: "Assignment2_"
+author: "Dominique Mashini"
+date: "12-09-2020"
+output: html_document
+---
+
+# Assignment 2: Relationships and Distributions
+
+In my previous assignment I worked with a Chilean Public Opinion Survey (CEP, 2019). Considering the lack of data for urban planning purposes, I replaced the source of my information with the Census from the United States Census Bureau.
+
+
+## Loading the packages for the assignment
+
+First, I'll load the following libraries for this assignment:
+
+```{r load libraries, message=FALSE}
+library(tidycensus)
+library(tidyverse)
+library(ggplot2)
+```
+## Reading and filtering the data
+
+I obtained the data from the 1-year ACS Public Use survey at the person-level in the state of Texas, for the year 2018.
+I created a dataframe with the list of all the variables available from the census package. I filtered and explored the variables with the following function:
+
+```{r}
+person_variables_2018 <- 
+  pums_variables %>% 
+  distinct(year, survey, var_code, var_label, data_type, level) %>% 
+  filter(level == "person", year == 2018, survey == "acs1")
+  
+```
+
+
+## Defining and renaming variables
+
+After browsing through the database person_variables_2018, I defined and renamed my 5 variables of interest:
+
+	
+1. Travel time to work (var code: JWMNP) = Traveltime (continuous)
+2. Age (var code: AGEP) = Age (continuous)
+3. Educational attainment (var code: SCHL) = Edattain (categorical)
+4. Means of Transportation (var code: JWTR) = Meanstransp (categorical)
+5. Total person's income (var code: PINCP) = Income (continuous)
+
+I also filtered the data, eliminating the observations with negative and 0 values in the income variable, and those that do not travel. 
+ 
+
+```{r load person-level data, results='hide'}
+
+
+vars <- c(
+  Traveltime = "JWMNP",
+  Age = "AGEP",
+  Edattain = "SCHL",
+  Meanstransp = "JWTR",
+  Income = "PINCP"
+)
+
+data <- get_pums(
+  variables = vars,
+  state = "TX",
+  year = 2018,
+  survey = "acs1",
+  recode = TRUE
+) %>%
+    filter(Traveltime > 1) %>%
+  filter(Income > 1)
+```
+
+## Distribution of Continuous Variables
+
+First, I will calculate the summary statistics:
+
+```{r}
+Age_summary <- summary(data$Age)
+Age_sd <-sd(data$Age, na.rm = TRUE)
+Age_pop_mean_int <- t.test(data$Age)
+Traveltime_summary <- summary(data$Traveltime)
+Traveltime_sd <- sd(data$Traveltime, na.rm = TRUE)
+Traveltime_pop_mean_int <- t.test(data$Traveltime)
+Income_summary <- summary(data$Income)
+Income_sd <-sd(data$Income, na.rm = TRUE)
+Income_pop_mean_int <- t.test(data$Income)
+
+```
+
+I will display the information in a summary table:
+
+```{r}
+summary_table <- tibble(
+  Statistics = c("Sample mean", 
+                "Median",
+                "Standard deviation",
+                "Interquartile range",
+                "Population mean (95% confidence)"),
+`Age`= c(prettyNum(Age_summary["Mean"], digits=3),
+                           Age_summary["Median"],
+                           prettyNum(Age_sd, digits = 3),
+                           paste(Age_summary["1st Qu."],"to", 
+                                 Age_summary["3rd Qu."]),
+                           paste(prettyNum(Age_pop_mean_int$conf.int[1],
+                                           digits=3), "to",
+                                 prettyNum(Age_pop_mean_int$conf.int[2],
+                                               digits=3))
+    ),
+`Travel time`= c(prettyNum(Traveltime_summary["Mean"], digits=3),
+                           Traveltime_summary["Median"],
+                           prettyNum(Traveltime_sd, digits = 3),
+                           paste(Traveltime_summary["1st Qu."],"to", 
+                                 Traveltime_summary["3rd Qu."]),
+                           paste(prettyNum(Traveltime_pop_mean_int$conf.int[1],
+                                           digits=3), "to",
+                                 prettyNum(Traveltime_pop_mean_int$conf.int[2],
+                                               digits=3))),
+`Income`= c(prettyNum(Income_summary["Mean"], digits=3),
+                           Income_summary["Median"],
+                           prettyNum(Income_sd, digits = 3),
+                           paste(Income_summary["1st Qu."],"to", 
+                                 Income_summary["3rd Qu."]),
+                           paste(prettyNum(Income_pop_mean_int$conf.int[1],
+                                           digits=3), "to",
+                                 prettyNum(Income_pop_mean_int$conf.int[2],
+                                               digits=3))),
+
+) 
+
+summary_table
+                                               
+```
+## Histograms
+
+I will create an histogram for each of these three distributions:
+
+### Age
+
+```{r}
+ggplot(data, aes( x = Age)) +
+  geom_histogram(color = "white", binwidth = 2) + 
+  theme_bw() +
+  scale_x_continuous(name = "Age person-level (years)") +
+  scale_y_continuous(name = "Number of people in the sample")
+```
+
+Description:
+
+The distribution of age in the sample is slightly multimodal and right-skewed, with a higher frequency between the ages 31-54 and very few individuals over 75.
+
+### Travel time
+
+```{r}
+ggplot(data, aes( x = Traveltime)) +
+  geom_histogram(color = "white", binwidth = 6) + 
+  theme_bw() +
+  scale_x_continuous(name = "Travel time (minutes)") +
+  scale_y_continuous(name = "Number of people in the sample")
+```
+
+
+Description:
+
+The distribution of the travel time variable is positively skewed (the mean is larger than the mode), and is mainly concentrated between 15 to 30 minutes.There is an extreme outlier over 150 minutes that probably responds to individuals commuting between cities.
+
+
+### Income
+
+
+```{r}
+ggplot(data, aes(x = Income)) + 
+  geom_histogram(color = "gray", binwidth = 80) +
+  theme_bw() +
+  scale_x_continuous(name = 
+    "Income (USD)",
+                     breaks = breaks <- seq(0, 1000000, by = 100000),
+                     labels = paste(breaks*1000, sep = "")) + 
+  scale_y_continuous(name = "Number of people in sample") 
+```
+
+Description:
+
+The income distribution is also positively skewed, with the main values concentrated between USD 20,000 and 70,000.There are some high-value outliers that extend the tail of the graph and affect the mean of the variable. 
+
+
+## Distribution of Categorical variables
+
+For the categorical values I will browse through the labels of Means of Transportation and Educational Attainment.
+
+
+### Means of transportation
+
+
+```{r}
+unique (data$Meanstransp)
+```
+I will select the following labels:
+
+01= car, truck or van;
+02= bus or trolleybus;
+03= streetcar or trolleycar;
+04= subway;
+08= motorcycle;
+09= bicycle;
+10= walked.
+
+
+I'll do a test for each category of interest:
+
+```{r}
+Meanstransp01 <- t.test(data$Meanstransp == "01")
+Meanstransp02 <- t.test(data$Meanstransp == "02")
+Meanstransp03 <- t.test(data$Meanstransp == "03")
+Meanstransp04 <- t.test(data$Meanstransp == "04")
+Meanstransp08 <- t.test(data$Meanstransp == "08")
+Meanstransp09 <- t.test(data$Meanstransp == "09")
+Meanstransp10 <- t.test(data$Meanstransp == "10")
+
+```
+
+
+I'll obtain the average and 95 percent confidence interval for each Mean of Transportation:
+
+```{r}
+datatable <- tibble(`Means of Transportation`= c("01", "02", "03", "04", "08", "09","10"),
+`Average` = c(paste(prettyNum(Meanstransp01$estimate*100, digits = 3), "%"),
+              paste(prettyNum(Meanstransp02$estimate*100, digits = 3),"%"), 
+              paste(prettyNum(Meanstransp03$estimate*100, digits = 3), "%"),
+              paste(prettyNum(Meanstransp04$estimate*100, digits = 3), "%"),
+              paste(prettyNum(Meanstransp08$estimate*100, digits = 3), "%"),
+              paste(prettyNum(Meanstransp09$estimate*100, digits = 3), "%"),
+              paste(prettyNum(Meanstransp10$estimate*100, digits = 3), "%")),
+`95-percent confidence interval` =  c(paste(prettyNum(Meanstransp01$conf.int[1]*100,digits = 3), "% to ",
+                                prettyNum(Meanstransp01$conf.int[2]*100,
+                                          digits = 3), "%"),
+                         paste(prettyNum(Meanstransp02$conf.int[1]*100,
+                                          digits = 3), "% to ",
+                                prettyNum(Meanstransp02$conf.int[2]*100,
+                                          digits = 3), "%"),
+                         paste(prettyNum(Meanstransp03$conf.int[1]*100,
+                                          digits = 3), "% to ",
+                                prettyNum(Meanstransp03$conf.int[2]*100,
+                                          digits = 3), "%"),
+                         paste(prettyNum(Meanstransp04$conf.int[1]*100,
+                                          digits = 3), "% to ",
+                                prettyNum(Meanstransp04$conf.int[2]*100,
+                                          digits = 3), "%"), 
+                         paste(prettyNum(Meanstransp08$conf.int[1]*100,
+                                          digits = 3), "% to ",
+                                prettyNum(Meanstransp08$conf.int[2]*100,
+                                          digits = 3), "%"),
+                         paste(prettyNum(Meanstransp09$conf.int[1]*100,
+                                          digits = 3), "% to ",
+                                prettyNum(Meanstransp09$conf.int[2]*100,
+                                          digits = 3), "%"),
+                         paste(prettyNum(Meanstransp10$conf.int[1]*100,
+                                          digits = 3), "% to ",
+                                prettyNum(Meanstransp10$conf.int[2]*100,
+                                          digits = 3), "%")))
+
+
+datatable
+
+```
+
+
+### Educational Attainment
+
+I repeated the process for the categorical variable Educational Attainment:
+
+```{r}
+unique(data$Edattain)
+```
+I'll select the following labels for my analysis:
+
+01 = No schooling completed;
+16 = Regular highschool diploma;
+19 = 1 or more years of college credit;
+21 = Bachelor's degree;
+22 = Master's degree;
+24 = Docorate degree.
+
+I'll do a test for each category of interest:
+
+```{r}
+Edattain01 <- t.test(data$Edattain == "01")
+Edattain16 <- t.test(data$Edattain == "16")
+Edattain19 <- t.test(data$Edattain == "19")
+Edattain21 <- t.test(data$Edattain == "21")
+Edattain22 <- t.test(data$Edattain == "22")
+Edattain24 <- t.test(data$Edattain == "24")
+
+```
+
+I'll obtain the average and 95 percent confidence interval of each category of interest:
+
+```{r}
+datatable_2 <- tibble(`Educational Attainment`= c("01", "16", "19", "21", "22", "24"),
+`Average` = c(paste(prettyNum(Edattain01$estimate*100, digits = 3), "%"),
+              paste(prettyNum(Edattain16$estimate*100, digits = 3),"%"), 
+              paste(prettyNum(Edattain19$estimate*100, digits = 3), "%"),
+              paste(prettyNum(Edattain21$estimate*100, digits = 3), "%"),
+              paste(prettyNum(Edattain22$estimate*100, digits = 3), "%"),
+              paste(prettyNum(Edattain24$estimate*100, digits = 3), "%")),
+`95-percent confidence interval` =  c(paste(prettyNum(Edattain01$conf.int[1]*100,digits = 3), "% to ",
+                                prettyNum(Edattain01$conf.int[2]*100,
+                                          digits = 3), "%"),
+                         paste(prettyNum(Edattain16$conf.int[1]*100,
+                                          digits = 3), "% to ",
+                                prettyNum(Edattain16$conf.int[2]*100,
+                                          digits = 3), "%"),
+                         paste(prettyNum(Edattain19$conf.int[1]*100,
+                                          digits = 3), "% to ",
+                                prettyNum(Edattain19$conf.int[2]*100,
+                                          digits = 3), "%"),
+                         paste(prettyNum(Edattain21$conf.int[1]*100,
+                                          digits = 3), "% to ",
+                                prettyNum(Edattain21$conf.int[2]*100,
+                                          digits = 3), "%"), 
+                         paste(prettyNum(Edattain22$conf.int[1]*100,
+                                          digits = 3), "% to ",
+                                prettyNum(Edattain22$conf.int[2]*100,
+                                          digits = 3), "%"),
+                         paste(prettyNum(Edattain24$conf.int[1]*100,
+                                          digits = 3), "% to ",
+                                prettyNum(Edattain24$conf.int[2]*100,
+                                          digits = 3), "%")))
+
+
+
+datatable_2
+```
+
+
+
+
+
+
