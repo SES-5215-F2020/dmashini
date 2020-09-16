@@ -66,7 +66,7 @@ data <- get_pums(
   recode = TRUE
 ) %>%
     filter(Traveltime > 1) %>%
-  filter(Income > 1)
+  filter(Income > 1) 
 ```
 
 ## Distribution of Continuous Variables
@@ -140,7 +140,7 @@ I will create an histogram for each of these three distributions:
 ggplot(data, aes( x = Age)) +
   geom_histogram(color = "white", binwidth = 2) + 
   theme_bw() +
-  scale_x_continuous(name = "Age person-level (years)") +
+  scale_x_continuous(name = "Age (years)") +
   scale_y_continuous(name = "Number of people in the sample")
 ```
 
@@ -162,7 +162,7 @@ ggplot(data, aes( x = Traveltime)) +
 Description:
 
 The distribution of the travel time variable is positively skewed (the mean is larger than the mode), and is mainly concentrated between 15 to 30 minutes.There is an extreme outlier over 150 minutes that probably responds to individuals commuting between cities.
-<<<<<<< HEAD
+
 I'm also interested in obtaining the percentage of people that travel less than 15 minutes:
 
 ```{r}
@@ -174,7 +174,9 @@ summarise(
 tot_pop = n(),
 tot_min15 = sum(min15)
 ) %>% 
-mutate(perc15 = tot_min15 / tot_pop)
+mutate(perc15 = tot_min15 / tot_pop) %>%
+
+knitr::kable(caption = "Travel time less than 15 minutes")
 
 ```
 
@@ -235,10 +237,10 @@ Meanstransp10 <- t.test(data$Meanstransp == "10")
 ```
 
 
-I'll obtain the average and 95 percent confidence interval for each Mean of Transportation:
+I'll obtain the average and 95 percent confidence interval for each Means of Transportation:
 
 ```{r}
-datatable <- tibble(`Means of Transportation`= c("01", "02", "03", "04", "08", "09","10"),
+datatable <- tibble(`Label`= c("01", "02", "03", "04", "08", "09","10"),
 `Average` = c(paste(prettyNum(Meanstransp01$estimate*100, digits = 3), "%"),
               paste(prettyNum(Meanstransp02$estimate*100, digits = 3),"%"), 
               paste(prettyNum(Meanstransp03$estimate*100, digits = 3), "%"),
@@ -312,7 +314,7 @@ Edattain24 <- t.test(data$Edattain == "24")
 I'll obtain the average and 95 percent confidence interval of each category of interest:
 
 ```{r}
-datatable_2 <- tibble(`Labels`= c("01", "16", "19", "21", "22", "24"),
+datatable_2 <- tibble(`Label`= c("01", "16", "19", "21", "22", "24"),
 `Average` = c(paste(prettyNum(Edattain01$estimate*100, digits = 3), "%"),
               paste(prettyNum(Edattain16$estimate*100, digits = 3),"%"), 
               paste(prettyNum(Edattain19$estimate*100, digits = 3), "%"),
