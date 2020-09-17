@@ -1,5 +1,5 @@
 ---
-title: "Assignment2_"
+title: "Assignment 2"
 author: "Dominique Mashini"
 date: "12-09-2020"
 output: html_document
@@ -19,9 +19,10 @@ library(tidycensus)
 library(tidyverse)
 library(ggplot2)
 ```
+
 ## Reading and filtering the data
 
-I obtained the data from the 1-year ACS Public Use survey at the person-level in the state of Texas, for the year 2018.
+I obtained the data from the 1-year ACS Public Use survey at the person-level in the state of Texas (year 2018).
 I created a dataframe with the list of all the variables available from the census package. I filtered and explored the variables with the following function:
 
 ```{r}
@@ -44,7 +45,7 @@ After browsing through the database person_variables_2018, I defined and renamed
 4. Means of Transportation (var code: JWTR) = Meanstransp (categorical)
 5. Total person's income (var code: PINCP) = Income (continuous)
 
-I also filtered the data, eliminating the observations with negative and 0 values in the income variable, and those that do not travel. 
+I also filtered the data, eliminating the observations with 0 and negative values in the income and travel time variables. 
  
 
 ```{r load person-level data, results='hide'}
@@ -66,7 +67,7 @@ data <- get_pums(
   recode = TRUE
 ) %>%
     filter(Traveltime > 1) %>%
-  filter(Income > 1) 
+  filter(Income > 1)
 ```
 
 ## Distribution of Continuous Variables
@@ -127,7 +128,7 @@ summary_table <- tibble(
 ) 
 
   
-knitr::kable(summary_table, caption = "Characteristics of census, TX")
+knitr::kable(summary_table, caption = "General Characteristics of Census, TX")
                                                
 ```
 ## Histograms
@@ -141,12 +142,12 @@ ggplot(data, aes( x = Age)) +
   geom_histogram(color = "white", binwidth = 2) + 
   theme_bw() +
   scale_x_continuous(name = "Age (years)") +
-  scale_y_continuous(name = "Number of people in the sample")
+  scale_y_continuous(name = "Number of people")
 ```
 
 Description:
 
-The distribution of age in the sample is slightly multimodal and right-skewed, with a higher frequency between the ages 31-54 and very few individuals over 75.
+The distribution of age in the sample looks normal and slightly right-skewed, with a higher frequency between the ages 31-54 and very few individuals over 75.
 
 ### Travel time
 
@@ -155,7 +156,7 @@ ggplot(data, aes( x = Traveltime)) +
   geom_histogram(color = "white", binwidth = 6) + 
   theme_bw() +
   scale_x_continuous(name = "Travel time (minutes)") +
-  scale_y_continuous(name = "Number of people in the sample")
+  scale_y_continuous(name = "Number of people")
 ```
 
 
@@ -163,7 +164,7 @@ Description:
 
 The distribution of the travel time variable is positively skewed (the mean is larger than the mode), and is mainly concentrated between 15 to 30 minutes.There is an extreme outlier over 150 minutes that probably responds to individuals commuting between cities.
 
-I'm also interested in obtaining the percentage of people that travel less than 15 minutes:
+For further analysis, I'm also interested in obtaining the percentage of people that travel less than 15 minutes:
 
 ```{r}
 data %>% 
@@ -192,7 +193,7 @@ ggplot(data, aes(x = Income)) +
     "Income (USD)",
                      breaks = breaks <- seq(0, 1000000, by = 100000),
                      labels = paste(breaks*1000, sep = "")) + 
-  scale_y_continuous(name = "Number of people in sample") 
+  scale_y_continuous(name = "Number of people") 
 ```
 
 Description:
@@ -200,12 +201,12 @@ Description:
 The income distribution is wide and also positively skewed, with the main values concentrated between USD 20,000 and 70,000.There are some high-value outliers that extend the tail of the graph and affect the mean of the variable. 
 
 
-## Distribution of Categorical variables
+## Distribution of Categorical Variables
 
-For the categorical values I will browse through the labels of Means of Transportation and Educational Attainment.
+For the categorical values I'll browse through the labels of Means of Transportation and Educational Attainment.
 
 
-### Means of transportation
+### Means of Transportation
 
 First, I'll browse through the labels:
 
@@ -237,11 +238,11 @@ Meanstransp10 <- t.test(data$Meanstransp == "10")
 ```
 
 
-I'll obtain the average and 95 percent confidence interval for each Means of Transportation:
+I'll obtain the sample proportion and 95 percent confidence interval for each Means of Transportation:
 
 ```{r}
 datatable <- tibble(`Label`= c("01", "02", "03", "04", "08", "09","10"),
-`Average` = c(paste(prettyNum(Meanstransp01$estimate*100, digits = 3), "%"),
+`Sample proportion` = c(paste(prettyNum(Meanstransp01$estimate*100, digits = 3), "%"),
               paste(prettyNum(Meanstransp02$estimate*100, digits = 3),"%"), 
               paste(prettyNum(Meanstransp03$estimate*100, digits = 3), "%"),
               paste(prettyNum(Meanstransp04$estimate*100, digits = 3), "%"),
@@ -311,11 +312,11 @@ Edattain24 <- t.test(data$Edattain == "24")
 
 ```
 
-I'll obtain the average and 95 percent confidence interval of each category of interest:
+I'll obtain the sample proportion and 95 percent confidence interval of each category of interest:
 
 ```{r}
 datatable_2 <- tibble(`Label`= c("01", "16", "19", "21", "22", "24"),
-`Average` = c(paste(prettyNum(Edattain01$estimate*100, digits = 3), "%"),
+`Sample proportion` = c(paste(prettyNum(Edattain01$estimate*100, digits = 3), "%"),
               paste(prettyNum(Edattain16$estimate*100, digits = 3),"%"), 
               paste(prettyNum(Edattain19$estimate*100, digits = 3), "%"),
               paste(prettyNum(Edattain21$estimate*100, digits = 3), "%"),
