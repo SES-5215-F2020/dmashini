@@ -1,0 +1,344 @@
+---
+title: "Assignment3"
+author: "Dominique Mashini"
+date: "19-09-2020"
+output: html_document
+html_document:
+    theme: cosmo
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    
+---
+
+# Assignment 3: Relationships between variables
+
+## Loading packages for the assignment
+
+First, I will load the following libraries for this assignment:
+
+```{r load libraries, message=FALSE}
+library(ggplot2)
+library(tidycensus)
+library(tidyverse)
+```
+
+```{r load themes, message= FALSE}
+library(ggthemes)
+```
+
+## Reading and filtering the data
+
+I obtained the data from the 1-year ACS Public Use survey at the person-level in the state of Texas (year 2018).
+I created a dataframe with the list of all the variables available from the census package. I filtered the variables with the following function:
+
+```{r}
+person_variables_2018 <- 
+  pums_variables %>% 
+  distinct(year, survey, var_code, var_label, data_type, level) %>% 
+  filter(level == "person", year == 2018, survey == "acs1")
+```
+
+## Defining, combining, and renaming variables
+
+After browsing through the database person_variables_2018, I defined and renamed my 5 variables of interest:
+	
+1. Travel time to work (var code: JWMNP) = Traveltime (continuous)
+2. Age (var code: AGEP) = Age (continuous)
+3. Educational attainment (var code: SCHL) = Edattain (categorical)
+4. Means of Transportation (var code: JWTR) = Meanstransp (categorical)
+5. Total person's income (var code: PINCP) = Income (continuous)
+
+I filtered the data, eliminating the observations with 0 and negative values in the income and travel time variables. I also selected my variables of interest for my categorical variables.
+I merged some sub-categories of means of transportation, because it is interesting to analyze non-motorized mobility (bicycle or walked), public transportation (bus, streetcar, or subway), and private transportation (car, truck, or van). 
+
+```{r variables, message = FALSE, results='hide'}
+
+vars <- c(
+  Traveltime = "JWMNP",
+  Age = "AGEP",
+  Edattain = "SCHL",
+  Meanstransp = "JWTR",
+  Income = "PINCP"
+)
+
+data <- get_pums(
+  variables = vars,
+  state = "TX",
+  year = 2018,
+  survey = "acs1",
+  recode = TRUE
+) %>%
+    filter(Traveltime > 1) %>%
+  filter(Income > 0) %>%
+  filter(Meanstransp == "01"| Meanstransp == "02"| Meanstransp == "03"|Meanstransp == "04"|Meanstransp == "09"|Meanstransp == "10") %>%
+  filter(Edattain == "01"| Edattain == "16" | Edattain == "19" | Edattain == "21" | Edattain == "22" | Edattain == "24") %>%
+mutate(Meanstransp = case_when(
+    Meanstransp == "01" ~ "Car, truck, or van",
+    Meanstransp == "03" | Meanstransp == "04"  | Meanstransp == "02" ~ "Bus, streetcar or subway",
+    Meanstransp == "09" | Meanstransp == "10" ~ "Bicycle or walked")) %>%
+
+  mutate(Edattain = case_when(
+    Edattain == "01" ~ "1 No schooling completed",
+    Edattain == "16" ~ "2 Highschool diploma",
+    Edattain == "19" ~ "3 College credit",
+    Edattain == "21" ~ "4 Bachelor",
+    Edattain == "22" ~ "5 Masters",
+    Edattain == "24" ~ "6 Doctorate"))
+    
+
+```
+
+
+# Relationships between variables
+
+I want to explore the relationship between age, educational attainment, travel time, means of transportation and income on the person level. 
+
+
+## Correlation between Continuous Variables
+
+First, I will test the relationship between my continuous variables (age, travel time and income) by running a correlation test.
+
+
+```{r}
+correlation1 <- cor.test(data$Age, data$Traveltime)
+
+correlation1
+```
+
+
+
+
+```{r}
+correlation2 <- cor.test(data$Age, data$Income)
+
+correlation2
+```
+
+```{r}
+correlation3 <- cor.test(data$Traveltime, data$Income)
+
+correlation3
+```
+Correlation analysis based on Pearson's r and p-values:
+
+In my three correlation analysis I see a weak, but statistically significant, positive relationship at a 95% confidence level. The stronger correlation is seen between age and income (p-value =0.24).
+To visualize these relationships, I will use scatter plot graphs:
+
+
+```{r scatterplot, message= FALSE}
+ggplot(data, aes(x = Age, y = Traveltime)) + 
+    geom_point(size = 0.5, alpha = 0.25, position = "jitter") +
+    geom_smooth() +
+    theme_economist_white() +
+    scale_x_continuous(name = "Age (years)") +
+    scale_y_continuous(name = "Travel time (minutes)",
+                      breaks = seq(0, 150, by = 10), 
+                      labels = paste("",
+                                  prettyNum(seq(0, 150, by = 10),
+                                            big.mark = ","))) +
+      annotate(geom = "text", x = 16, y = 180, 
+           label = paste("Correlation (95-percent confidence):",
+                         prettyNum(correlation1$conf.int[1], digits = 2), 
+                         "to",
+                         prettyNum(correlation1$conf.int[2], digits = 2)),
+           hjust = 0)
+```
+
+
+Looking at the scatter plot graph, it is more evident that the correlation is weaker and slightly negative over 65 years.
+
+
+```{r scatterplot2, message= FALSE}
+ggplot(data, aes(x = Age, y = Income)) + 
+    geom_point(size = 0.4, alpha = 0.2, position = "jitter") +
+    geom_smooth() +
+    theme_economist_white() +
+    scale_x_continuous(name = "Age (years)") +
+    scale_y_continuous(name = "Income (USD)",
+                      breaks = seq(0, 1000000, by = 100000), 
+                      labels = paste("",
+                                  prettyNum(seq(0, 1000000, by = 100000),
+                                            big.mark = ","))) +
+          annotate(geom = "text", x = 20, y = 1100000, 
+           label = paste("Correlation (95-percent confidence):",
+                         prettyNum(correlation2$conf.int[1], digits = 2), 
+                         "to",
+                         prettyNum(correlation2$conf.int[2], digits = 2)),
+           hjust = 0)
+```
+
+I can see a stronger, positive correlation between age an income. 
+
+```{r scatterplot3, message= FALSE}
+ggplot(data, aes(x = Income, y = Traveltime)) + 
+    geom_point(size = 0.5, alpha = 0.2, position = "jitter") +
+    geom_smooth() +
+    theme_economist_white() +
+    scale_x_continuous(name = "Income (USD)") +
+    scale_y_continuous(name = "Travel Time (minutes)",
+                      breaks = seq(0, 150, by = 10), 
+                      labels = paste("",
+                                  prettyNum(seq(0, 150, by = 10),
+                                            big.mark = ","))) +
+       annotate(geom = "text", x = 0, y = 170, 
+           label = paste("Correlation (95-percent confidence):",
+                         prettyNum(correlation3$conf.int[1], digits = 2), 
+                         "to",
+                         prettyNum(correlation3$conf.int[2], digits = 2)),
+           hjust = 0)
+```
+
+
+There is an interesting visualization of the correlation between income and travel time. While positive, there are fewer high-income people who travel more than 150 minutes. 
+
+
+## Relationship between Categorical Variables
+
+I will use the Chi-square test of association for determining whether there is a statistically significant association between my two categorical variables.
+
+
+```{r}
+chi_sq <- chisq.test(data$Edattain, data$Meanstransp)
+chi_sq
+```
+
+
+
+```{r}
+knitr::kable(chi_sq$observed)
+```
+
+
+
+```{r}
+knitr::kable(chi_sq$expected)
+```
+
+
+
+```{r}
+C_diff <- chi_sq$observed - chi_sq$expected
+
+C_diff_data <- as.data.frame(C_diff)
+C_diff_data
+```
+
+
+I can assume there is a statistically significant relationship at a 95% confidence interval between educational attainment and means of transportation because in the chi-square test the p-value is below 0.05. 
+I see some values that are particularly low, such as no schooling completed with non-motorized mobilization and doctorate with bus, streetcar or subway.
+
+
+## Relationships between Educational Attainment and Continuous Variables
+
+For the relationship between my categorical and continuous variables, I will use the anova test:
+
+```{r}
+anova <- aov(data$Age ~ data$Edattain)
+
+summary(anova)
+```
+
+```{r}
+anova <- aov(data$Traveltime ~ data$Edattain)
+
+summary(anova)
+```
+```{r}
+anova <- aov(data$Income ~ data$Edattain)
+
+summary(anova)
+```
+Difference Check:
+
+```{r}
+differences <- TukeyHSD(anova)
+differences
+```
+
+There exists a significant association between educational attainment and age, income and travel time. In a more in depth review of income and educational attainment, there appears a positive difference and significant association, except between Highschool diploma and No schooling completed (p adj = 0.085).
+
+I decided to display the relationship between educational attainment and income using a box-plot. As my categorical variable is ordinal, I ordered the educational attainment categories for a better visualization of the relationship:
+
+
+```{r}
+ggplot(data, aes(x = Edattain, y = Income)) +
+  geom_boxplot() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90)) +
+  scale_x_discrete(name = "Educational Attainment") +
+  scale_y_continuous(name = "Income (USD)",
+                     breaks = seq(0, 1000000, by = 100000),
+                     labels = paste(prettyNum(seq(0, 1000000, by = 100000), 
+                                              big.mark = ",")))
+```
+
+## Relationships between Means of Transportation and Continuous Variables
+
+For the relationship between my categorical and continuous variables, I use the anova test:
+
+
+```{r}
+anova <- aov(data$Age ~ data$Meanstransp)
+
+summary(anova)
+```
+
+```{r}
+anova <- aov(data$Traveltime ~ data$Meanstransp)
+
+summary(anova)
+```
+
+```{r}
+anova <- aov(data$Income ~ data$Meanstransp)
+
+summary(anova)
+```
+```{r}
+differences <- TukeyHSD(anova)
+differences
+```
+
+
+There exists a significant relationship between means of transportation and all the continuous variables at a 95% confidence level, with all p-values are under the 0.05 threshold.
+In the difference check between income and means of transportation, there is a less incidence of income between the variables 'bus, streetcar or subway' and 'bicycle or walked'.
+
+I decided to display the relationship between travel time and means of transportation using a box-plot: 
+
+
+```{r}
+ggplot(data, aes(x = Meanstransp, y = Traveltime)) +
+  geom_boxplot() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90)) +
+  scale_x_discrete(name = "Means of Transportation") +
+  scale_y_continuous(name = "Travel Time (minutes)",
+                     breaks = seq(0, 200, by = 20),
+                     labels = paste(prettyNum(seq(0, 200, by = 20), 
+                                              big.mark = ",")))
+```
+
+
+
+As expected, the travel time is longer and more varied in the 'bus, streetcar, or subway' variable, followed by 'car, truck, or van'. The time traveled by bicycle or walked is less 
+
+
+## Relationship between Means of Transportation (Motorized and Non-motorized) and Age
+
+To further my analysis, I combined the categorical variable of means of transportation in motorized and non-motorized, to test them with Age through a two-sample t-test. 
+
+
+```{r}
+data1 <- data %>% 
+    mutate(
+        motor = case_when(
+            Meanstransp == "Car, truck, or van" |  Meanstransp == "Bus, streetcar or subway" ~ "motor",
+            Meanstransp == "Bicycle or walked"  ~ "no motor"
+        ))
+
+differences1 <- t.test(data1$Age ~ data1$motor == "motor")
+differences1
+```
+
+There is a significant relationship (negative, seen in the 95 percent confidence interval) found between age and means of transportation (motorized and non-motorized); younger people use more non-motorized transportation.
