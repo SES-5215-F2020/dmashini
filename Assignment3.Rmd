@@ -321,12 +321,12 @@ ggplot(data, aes(x = Meanstransp, y = Traveltime)) +
 
 
 
-As expected, the travel time is longer and more varied in the 'bus, streetcar, or subway' variable, followed by 'car, truck, or van'. The time traveled by bicycle or walked is less 
+As expected, the travel time is longer and more varied in the 'bus, streetcar, or subway' variable, followed by 'car, truck, or van'. The time traveled by bicycle or walked is less.
 
 
 ## Relationship between Means of Transportation (Motorized and Non-motorized) and Age
 
-To further my analysis, I combined the categorical variable of means of transportation in motorized and non-motorized, to test them with Age through a two-sample t-test. 
+To further my analysis, I combined the categories of means of transportation in motorized and non-motorized, in order to test them with age through a two-sample t-test. 
 
 
 ```{r}
@@ -341,4 +341,4 @@ differences1 <- t.test(data1$Age ~ data1$motor == "motor")
 differences1
 ```
 
-There is a significant relationship (negative, seen in the 95 percent confidence interval) found between age and means of transportation (motorized and non-motorized); younger people use more non-motorized transportation.
+There is a significant relationship (negative, seen in the 95 percent confidence interval) found between age and means of transportation (motorized and non-motorized); the youngest use more non-motorized transport.
