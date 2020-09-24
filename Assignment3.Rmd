@@ -122,7 +122,7 @@ correlation3
 ```
 Correlation analysis based on Pearson's r and p-values:
 
-In my three correlation analysis I see a weak, but statistically significant, positive relationship at a 95% confidence level. The stronger correlation is seen between age and income (p-value =0.24).
+In my three correlation analysis I see a weak, but statistically significant, positive relationship at a 95% confidence level. The stronger correlation is seen between age and income (cor =0.24).
 To visualize these relationships, I will use scatter plot graphs:
 
 
@@ -225,8 +225,10 @@ C_diff_data
 ```
 
 
-I can assume there is a statistically significant relationship at a 95% confidence interval between educational attainment and means of transportation because in the chi-square test the p-value is below 0.05. 
-I see some values that are particularly low, such as no schooling completed with non-motorized mobilization and doctorate with bus, streetcar or subway.
+I can assume there is a statistically significant relationship at a 95% confidence interval between educational attainment and means of transportation because the p-value is below 0.05. 
+
+In the tables I see some values that are particularly low, such as no schooling completed with non-motorized mobilization and doctorate with bus, streetcar or subway.
+
 
 
 ## Relationships between Educational Attainment and Continuous Variables
@@ -256,7 +258,7 @@ differences <- TukeyHSD(anova)
 differences
 ```
 
-There exists a significant association between educational attainment and age, income and travel time. In a more in depth review of income and educational attainment, there appears a positive difference and significant association, except between Highschool diploma and No schooling completed (p adj = 0.085).
+There exists a significant association between educational attainment and age, income and travel time. On a more in-depth review of income and educational attainment, a positive difference and significant association appear, except between highschool diploma and no schooling completed (p adj = 0.085).
 
 I decided to display the relationship between educational attainment and income using a box-plot. As my categorical variable is ordinal, I ordered the educational attainment categories for a better visualization of the relationship:
 
@@ -301,8 +303,8 @@ differences
 ```
 
 
-There exists a significant relationship between means of transportation and all the continuous variables at a 95% confidence level, with all p-values are under the 0.05 threshold.
-In the difference check between income and means of transportation, there is a less incidence of income between the variables 'bus, streetcar or subway' and 'bicycle or walked'.
+There exists a significant relationship between means of transportation and all the continuous variables at a 95% confidence level, with all p-values under the 0.05 threshold.
+In the difference check between income and means of transportation, there is a lower incidence of income between the variables 'bus, streetcar or subway' and 'bicycle or walked'.
 
 I decided to display the relationship between travel time and means of transportation using a box-plot: 
 
@@ -326,7 +328,7 @@ As expected, the travel time is longer and more varied in the 'bus, streetcar, o
 
 ## Relationship between Means of Transportation (Motorized and Non-motorized) and Age
 
-To further my analysis, I combined the categories of means of transportation in motorized and non-motorized, in order to test them with age through a two-sample t-test. 
+To further my analysis, I combined the categories of means of transportation into motorized and non-motorized, in order to test them with age through a two-sample t-test. 
 
 
 ```{r}
