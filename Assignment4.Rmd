@@ -1,0 +1,117 @@
+---
+title: "Assignment 4"
+author: "Dominique Mashini"
+date: "28-09-2020"
+output: html_document
+---
+
+# Assignment 4: Regression
+
+For this assignment, I will use the following libraries:
+
+```{r load libraries, message=FALSE}
+library(tidycensus)
+library(tidyverse)
+```
+
+## Loading the data
+
+I obtained the data from the 1-year ACS Public Use survey at the person-level in the state of Texas (year 2018).
+I created a data frame with the list of all the variables available from the census package. I filtered the variables with the following function:
+
+```{r}
+person_variables_2018 <- 
+  pums_variables %>% 
+  distinct(year, survey, var_code, var_label, data_type, level) %>% 
+  filter(level == "person", year == 2018, survey == "acs1")
+```
+
+## Defining, combining, and renaming variables
+
+After browsing through the database person_variables_2018, I defined and renamed my 5 variables of interest:
+
+1. Travel time to work (var code: JWMNP) = Traveltime (continuous)
+2. Age (var code: AGEP) = Age (continuous)
+3. Educational attainment (var code: SCHL) = Edattain (categorical)
+4. Means of Transportation (var code: JWTR) = Meanstransp (categorical)
+5. Total person's income (var code: PINCP) = Income (continuous)
+
+I filtered the data, eliminating the observations with 0 and negative values in the income and travel time variables. I also selected my variables of interest for my categorical variables.
+I merged some sub-categories of means of transportation, because it is interesting to analyze active mobility (bicycle or walked), public transportation (bus, streetcar, or subway), and private transportation (car, truck, or van). 
+
+```{r variables, message = FALSE, results='hide'}
+vars <- c(
+  Traveltime = "JWMNP",
+  Age = "AGEP",
+  Edattain = "SCHL",
+  Meanstransp = "JWTR",
+  Income = "PINCP"
+  
+)
+
+data <- get_pums(
+  variables = vars,
+  state = "TX",
+  year = 2018,
+  survey = "acs1",
+  recode = TRUE
+) %>%
+    filter(Traveltime > 1) %>%
+  filter(Income > 0) %>%
+  filter(Meanstransp == "01"| Meanstransp == "02"| Meanstransp == "03"|Meanstransp == "04"|Meanstransp == "09"|Meanstransp == "10") %>%
+  filter(Edattain == "01"| Edattain == "16" | Edattain == "19" | Edattain == "21" | Edattain == "22" | Edattain == "24") %>%
+mutate(Meanstransp = case_when(
+    Meanstransp == "01" ~ "1 Car, truck, or van",
+    Meanstransp == "03" | Meanstransp == "04"  | Meanstransp == "02" ~ "2 Bus, streetcar or subway",
+    Meanstransp == "09" | Meanstransp == "10" ~ "3 Bicycle or walked")) %>%
+
+  mutate(Edattain = case_when(
+    Edattain == "01" ~ "1 No schooling completed",
+    Edattain == "16" ~ "2 Highschool diploma",
+    Edattain == "19" ~ "3 College credit",
+    Edattain == "21" ~ "4 Bachelor",
+    Edattain == "22" ~ "5 Masters",
+    Edattain == "24" ~ "6 Doctorate"))
+    
+
+```
+
+## Linear Regression Model
+
+**Dependent variable**: Travel time.
+
+**Independent variables**:
+
+1. Income (continuous)
+
+2. Age (continuous)
+
+3. Educational Attainment (categorical)
+
+4. Means of Transportation (categorical)
+
+
+```{r}
+model <- lm(Traveltime ~ Income + Age + Edattain + Meanstransp, 
+            data = data)
+options(scipen = 999)
+
+summary(model)
+```
+
+## Interpreting the outcomes
+
+After doing some tests with my variables, I defined my model fit, where I could pay more attention to my R-squared value. A R-squared value of 0.023 shows me that this model predicts about 2% of the variation in time travel (minutes) from my data set. Although it is a low value, I consider difficult to predict and explain time travel through my independent variables: age, means of transportation, income, and educational attainment. More so, considering that my data does not include spatial information such as commuting distances or specific geolocations in Texas. 
+
+Next, I analyzed the values of the coefficients in the 'Estimate' column, and the significance of the model coefficients under each p-value. 
+
+In my educational attainment ordinal variable, my base category is no schooling completed, and I renamed the rest of the labels in the model to organize an incremental sequence for easier reading. 
+The model shows me that a higher educational attainment could explain less commuting times with a modest difference at all levels (coefficient estimates slightly decrease). For example, compared to someone with no schooling (lowest level of educational attainment), someone with a doctorate degree (highest level of educational attainment) could most likely commute 3,9 minutes less on average. This difference is low, but statistically significant (with a p-value less than 0.05). We also must consider that the model is controlling for income (which I infer is the most relevant for the case), age and means of transportation. Probably different incomes in the same educational attainment would show other results.
+
+In my categorical value 'means of transportation', the model shows a more considerable difference in travel time, using car, truck, or van as the base category (selected because it is the most used means of transportation in my sample). Controlling for age, income, and educational attainment, a person who rides a bicycle or walks is more likely to take 12 minutes less than someone who uses private transportation. On the other hand, someone who uses public transportation, such as bus, streetcar or subway, is more likely to commute 20 more minutes. In both cases we see a statistically significant difference looking at both p-values. 
+
+In my continuous variables, the difference is very small, but both coefficients are statistically significant at a 95-percentage confidence interval (p-values are less than 0.05). Looking at my model, a person one year older is more likely to travel 2 seconds more. Someone with higher income (expressed in USD) is more likely to travel fractions of seconds more. 
+
+
+
+
