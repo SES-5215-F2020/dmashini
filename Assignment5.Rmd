@@ -1,0 +1,235 @@
+---
+title: "Assignment 5"
+author: "Dominique Mashini"
+date: "03-10-2020"
+output: html_document
+---
+
+
+# Assignment 5: Comparing Regression Models
+
+For this assignment, I will use the following libraries:
+
+```{r load libraries, message=FALSE}
+library(tidyverse)
+library(tidycensus)
+library(jtools)
+library(interactions)
+library(knitr)
+```
+
+
+## Defining, combining, and renaming variables
+
+I obtained the data from the 1-year ACS Public Use survey at the person-level in the state of Texas (year 2018). After browsing through the database, I defined and renamed my 5 variables of interest:
+
+1. Travel time to work (var code: **JWMNP**) = Traveltime (continuous)
+2. Age (var code: **AGEP**) = Age (continuous)
+3. Educational attainment (var code: **SCHL**) = Edattain (categorical)
+4. Means of Transportation (var code: **JWTR**) = Meanstransp (categorical)
+5. Total person's income (var code: **PINCP**) = Income (continuous)
+
+I filtered the data, eliminating the observations with 0 and negative values in the income and travel time variables. I also selected my variables of interest for my categorical variables.
+I merged some sub-categories of means of transportation, because it is interesting to analyze active mobility (bicycle or walked), public transportation (bus, streetcar, or subway), and private transportation (car, truck, or van). 
+
+For this assignment I added the sex variable (var code: **SEX**) because I think it will make a difference for my model fit. 
+
+
+```{r variables, message = FALSE, results='hide'}
+vars <- c(
+  Traveltime = "JWMNP",
+  Age = "AGEP",
+  Edattain = "SCHL",
+  Meanstransp = "JWTR",
+  Income = "PINCP",
+  Sex = "SEX"
+  
+)
+
+data <- get_pums(
+  variables = vars,
+  state = "TX",
+  year = 2018,
+  survey = "acs1",
+  recode = TRUE
+) %>%
+    filter(Traveltime > 1) %>%
+  filter(Income > 0) %>%
+  filter(Meanstransp == "01"| Meanstransp == "02"| Meanstransp == "03"|Meanstransp == "04"|Meanstransp == "09"|Meanstransp == "10") %>%
+  filter(Edattain == "01"| Edattain == "16" | Edattain == "19" | Edattain == "21" | Edattain == "22" | Edattain == "24") %>%
+mutate(Meanstransp = case_when(
+    Meanstransp == "01" ~ "1 Car, truck, or van",
+    Meanstransp == "03" | Meanstransp == "04"  | Meanstransp == "02" ~ "2 Bus, streetcar or subway",
+    Meanstransp == "09" | Meanstransp == "10" ~ "3 Bicycle or walked")) %>%
+
+  mutate(Edattain = case_when(
+    Edattain == "01" ~ "1 No schooling completed",
+    Edattain == "16" ~ "2 Highschool diploma",
+    Edattain == "19" ~ "3 College credit",
+    Edattain == "21" ~ "4 Bachelor",
+    Edattain == "22" ~ "5 Masters",
+    Edattain == "24" ~ "6 Doctorate"))
+    
+```
+## Initial regression model
+
+First, I ran the linear regression model I used for my last assignment predicting travel time to work, based on income, age, educational attainment, and means of transportation. 
+
+
+```{r model 1, message=FALSE}
+
+model1 <- lm(Traveltime ~ Income + Age + Edattain + Meanstransp, 
+            data = data)
+options(scipen = 999)
+
+summary(model1)
+
+```
+
+In my last assignment I recognized that this model predicts about 2% of the variation in time travel (minutes) from my data set (with a 0.023 R-squared value). I considered it a low value, because it is difficult to predict and explain  travel time through my independent variables: age, means of transportation, income, and educational attainment. After looking at my p-values, I found that the coefficients were statistically significant at a 95-percentage confidence interval. 
+
+
+## Regression model with a log transformation
+
+Considering that the differences in travel time for each additional dollar earned by a person is a more substantial increase with lower income than with higher income, I decided to apply a log transformation to this variable.  
+
+```{r model 2, message=FALSE}
+
+model2 <- lm(Traveltime ~ log(Income) + Age + Edattain + Meanstransp, 
+            data = data)
+options(scipen = 999)
+
+summary(model2)
+
+```
+
+Applying a log transformation to income, my R-squared value increased from 0.023 to 0.031. Here I can see that if a person's income doubles, their travel time will increase by 2.6 minutes (whereas in the previous model, the increase was estimated in fractions of minutes). 
+
+
+## Regression model converting a continuous variable to a categorical variable
+
+Based on my previous model, I decided to transform my age variable into a categorical one. The main reason I think it will make a difference is that age is probably related to commuting times, but with different variations according to age ranges. 
+
+Then, I apply the regression model with age as a categorical variable:
+
+```{r}
+
+datacat <- data %>%
+  mutate(Agecat = case_when(Age < 20  ~ "1 Under 20yrs",
+                               Age >= 20 & Age < 65 ~ "2 Over20 Under65",
+                               Age >= 65 ~ "3 Over 65"))
+model3 <- lm(Traveltime ~ log(Income) + Agecat + Edattain + Meanstransp, 
+            data = datacat)
+
+summary(model3)
+```
+
+In this model I used **20 years and under** as my base category and I get a more detailed analysis of each age range. The model estimates that people **between the ages of 20 and 65** are more likely to travel 3.3 minutes longer, while those **over 65 years of age** travel 0.9 minutes less (the latter is not statistically significant at a 95% confidence interval). I prefer this model than the previous because the categories provide greater practical significance for age. 
+I also see that my Multiple R-squared value improved very slightly, from 0.031 to 0.033.
+
+
+## Regression model with interactions
+
+For my last model, I will combine all previous actions that improved  my Multiple R-squared values: (1) including a log transformation for income, and (2) converting my continuous variable of age into a categorical variable. Additionally, I will include the sex variable to my model and add an interaction between sex and income, because I want to know if the relationship between income and travel time is different for men and for women. 
+ 
+
+```{r}
+model4 <- lm(Traveltime ~ log(Income) + Agecat + Edattain + Meanstransp + Sex_label + log(Income):Sex_label, 
+            data = datacat)
+
+summary(model4)
+```
+
+My Multiple R-squared value increased to 0.04, therefore improving my model fit.
+The incorporation of sex into the analysis using female as my base category, shows me that in average men have a commute that is more likely to be 8,1 min longer than women (statistically significant at a 95% confidence interval). However, while I see that a higher income increases the travel time, the interaction shows me that this increase is slightly lower for men (the interaction between log(Income) and male has an estimate coefficient of -0.52). 
+
+I will plot the interaction to visualize better the relationship of income and travel time for men and for women:
+
+
+```{r interact_plot income sex, message=FALSE, fig.height=6, fig.width=8, warning=FALSE}
+
+interact_plot(model4, pred = Income, modx = Sex_label, interval = TRUE) +
+  scale_x_continuous(name = "Income (thousand USD)", 
+                     limits = c(0, 500000),
+                     breaks = breaks <- seq(0, 500000, by = 50000),
+                     labels = paste("$", 
+                                    prettyNum(breaks/1000, big.mark = "'"),
+                                    sep = "")) +
+  scale_y_continuous(name = "Travel time to work (minutes)",
+                     breaks = seq(0, 45, by = 5)) +
+  scale_color_discrete(name = "") +
+  scale_linetype_discrete(name = "") +
+  scale_fill_discrete(name = "") 
+
+```
+
+
+## Conclusions
+
+For my conclusion, I will visualize the results to compare the variation of the Multiple R-squared value after the adjustments in each model. 
+
+
+```{r}
+ModelFit <- tibble(model = c(1, 2, 3, 4),
+                   R_square = c(summary(model1)$adj.r.squared,
+                                summary(model2)$adj.r.squared,
+                                summary(model3)$adj.r.squared,
+                                summary(model4)$adj.r.squared))
+
+ggplot(ModelFit, aes(x = model, y = R_square)) +
+  geom_line() +
+  scale_x_continuous(name = "",
+                   breaks = breaks <- seq(1, 4, by = 1),
+                   labels = paste("Model", breaks)) +
+  scale_y_continuous(name = "Adjusted R-squared value") +
+  theme_bw()
+
+```
+
+Across the different models, each adjustment improved slightly the previous one. The first and most considerable increase was for the income log transformation. The third model achieved the most modest increase when transforming the continuous variable of age into a categorical age range. Finally, the inclusion of the sex variable and its interaction with income allowed another increase in the model fit. All cumulative actions improved my Multiple R-Squared value from 0.2 to 0.4. 
+
+
+```{r}
+coeff_names <- c("Income" = "Income",
+                 "Age" = "Age",
+                 "High School Diploma (compared to No schooling completed)" = 
+                   "Edattain2 Highschool diploma",
+                 "College credit (compared to No schooling completed)" = "Edattain3 College credit",
+                 "Bachelor degree (compared to No schooling completed)" = 
+                   "Edattain4 Bachelor",
+                 "Masters degree (compared to No schooling completed)" = 
+                   "Edattain5 Masters",
+                 "Doctorate degree (compared to No schooling completed)" =
+                   "Edattain6 Doctorate",
+                 "Public transportation (compared to private/motor)" = 
+                    "Meanstransp2 Bus, streetcar or subway",
+                 "Active mobility (compared to private/motor)" = 
+                    "Meanstransp3 Bicycle or walked",
+                 "Income (log)" = 
+                    "log(Income)",
+                 "Age 20-65 (compared to <20)" = 
+                    "Agecat2 Over20 Under65",
+                 "Age >65 (compared to <20)" = 
+                    "Agecat3 Over 65",
+                 "Male (compared to female)" = 
+                    "Sex_labelMale",
+                 "Interaction: log(Income) and male" =
+                 "log(Income):Sex_labelMale"
+                 )
+
+export_summs(model1, model4, 
+             error_format = "(p = {p.value})",
+             error_pos = "same",
+             model.names = c("Initial model", "Preferred model"),
+             coefs = coeff_names)
+```
+
+After reviewing the models, I can conclude that my fourth model (that included the log transformation of income, categorical transformation of age, and interaction between income and sex) achieved the best fit. With a Multiple R-squared value of 0.04, I can see that this model predicts about 4% of the variation in travel time (minutes) from my data set (the double of my previous model). 
+
+In general, I consider my Multiple R-Squared value low, but I recognize that travel time is not an easy variable to predict based on my independent variables. Furthermore, considering that my data does not include spatial information such as commuting distances or specific geolocations. However, it is interesting to see how the model fit improves and I can explain better my dependent variable by incorporating new adjustments and layers of analysis into my data set. 
+
+
+
+
+
+
